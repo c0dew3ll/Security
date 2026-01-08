@@ -3,17 +3,24 @@
 BASE_DIR=$(dirname "$0")
 LIB_DIR="$BASE_DIR/lib"
 
-if [[ -f "${LIB_DIR}/utils.sh" ]]; then
-    source "${LIB_DIR}/utils.sh"
-else
-    echo "Error: utils.sh not found in ${LIB_DIR}"
-    exit 1
-fi
+LIBS=("utils.sh" "comms.sh")
+
+for lib in "${LIBS[@]}"; do
+    if [[ -f "${LIB_DIR}/$lib" ]]; then
+        source "${LIB_DIR}/$lib"
+    else
+        echo "Error: ${lib} not found in ${LIB_DIR}"
+        exit 1
+    fi
+done
 
 #Default Values initialization
 TARGET="targets.txt"
 CONTINUE=false
+UPLOAD=false
 SCAN_TYPE="default"
+ENCRYPT_PASS="ChangeMe123!"
+STATIONARY_ROOM="UUID_222222222"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -23,6 +30,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     -c|--continue)
       CONTINUE=true
+      shift
+      ;;
+    -u|--upload)
+      UPLOAD=true
       shift
       ;;
     -s|--scan-type)
@@ -39,29 +50,19 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Parse Arguments
-while true; do
-  case "$1" in
-    -t | --target )    TARGET="$2"; shift 2 ;;
-    -c | --continue )  CONTINUE=true; shift ;;
-    -s | --scan-type ) SCAN_TYPE="$2"; shift 2 ;;
-    -- ) shift; break ;;
-    * ) break ;;
-  esac
-done
-
 #Parse SCAN_PARAMETERS
 case "$SCAN_TYPE" in
     "default") SCAN_PARAMETERS="-sT -p1-1000" ;;
     "fast")    SCAN_PARAMETERS="-F" ;;
     "full")    SCAN_PARAMETERS="-p-" ;;
-    "zombie")  SCAN_PARAMETERS="-sI ${ZOMBIE_IP} -Pn -f --data-lenght 32 -g" ;;
+    "zombie")  SCAN_PARAMETERS="-sI ${ZOMBIE_IP} -Pn -f --data-length 32 -g 53" ;;
     *)         SCAN_PARAMETERS="$SCAN_TYPE" ;; # Pozwala wpisać np. -sV bezpośrednio
 esac
 
 print_info "Target: $TARGET"
 print_info "Continue: $CONTINUE"
 print_info "Scan Type: $SCAN_TYPE"
+print_info "Upload: $UPLOAD"
 print_info "nmap parameters: $SCAN_PARAMETERS"
 
 print_info "Checking for nmap..."
@@ -101,16 +102,42 @@ fi
 
 #Read Target file
 
-if ! test -f targets.txt; then
-    print_error "[X] No targets.txt file in target folder, so noone to scan. Exiting."
-    exit 1;
+#TODO fix that. If usewr provide filename, and there is no targets.txt, it will fail
+if [[ ! -f "$TARGET" ]]; then
+    print_error "[X] Target file $TARGET not found. Exiting."
+    exit 1
 fi
 
 #Lunch nmap in loop 
-file=$(cat $TARGET)
-for line in $file
-do
+TARGET_FILENAME="${TARGET##*/}"
+while read -r line || [[ -n "$line" ]]; do
+    # Pomijaj puste linie i komentarze
+    [[ -z "$line" || "$line" =~ ^# ]] && continue
+    
     print_info "Starting scan for $line" 
-    TARGET_FILENAME="${TARGET##*/}"
-    nmap $line $SCAN_PARAMETERS -oX ./result/${TARGET_FILENAME}_${line}.xml
-done
+    nmap $line $SCAN_PARAMETERS -oX "./result/${TARGET_FILENAME}_${line}.xml"
+done < "$TARGET"
+
+if [[ "$UPLOAD" == true ]]; then
+    print_info "Exfiltrating data..."
+    
+    # Przechwytujemy TYLKO czysty link (dzięki poprawce print_info w lib)
+    RAW_LINK=$(send_results)
+    print_info "DEBUG: Przechwycony link to: --->$RAW_LINK<---" # Dodaj to tymczasowo
+
+    if [[ -n "$RAW_LINK" && "$RAW_LINK" == http* ]]; then
+        # Szyfrowanie
+        CIPHER_TEXT=$(encrypt_msg "$RAW_LINK" "$ENCRYPT_PASS")
+        
+        # Powiadomienie
+        notify_admin "$STATIONARY_ROOM" "NEW_REPORT: $CIPHER_TEXT"
+        print_success "Data sent to Hack.chat room: $STATIONARY_ROOM"
+        
+        # Cleanup
+        rm -rf ./result/*.xml
+        rm -rf ./temp/*
+        print_info "Local traces removed."
+    else
+        print_error "Exfiltration failed! RAW_LINK is empty or invalid."
+    fi
+fi
