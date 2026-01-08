@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
       usage
       ;;
     *)
-      printf "[!] Unknown option: $1\n"
+      printf "[!] Unknown option: $1"
       usage # Wyświetla pomoc przy błędnym argumencie
       ;;
   esac
@@ -59,50 +59,50 @@ case "$SCAN_TYPE" in
     *)         SCAN_PARAMETERS="$SCAN_TYPE" ;; # Pozwala wpisać np. -sV bezpośrednio
 esac
 
-print_info "Target: $TARGET\n"
-print_info "Continue: $CONTINUE\n"
-print_info "Scan Type: $SCAN_TYPE\n"
-print_info "nmap parameters: $SCAN_PARAMETERS\n"
+print_info "Target: $TARGET"
+print_info "Continue: $CONTINUE"
+print_info "Scan Type: $SCAN_TYPE"
+print_info "nmap parameters: $SCAN_PARAMETERS"
 
-print_info "Checking for nmap...\n"
+print_info "Checking for nmap..."
 if ! command -v nmap &> /dev/null
 then
-    print_error "\t[X] Nmap is not installed! Please install nmap and re-run!\n"
+    print_error "[X] Nmap is not installed! Please install nmap and re-run!"
     exit 1;
 else
-    print_success "\t[✓] Nmap installed!\n"
+    print_success "[✓] Nmap installed!"
 fi
 
 # Check for folders
-print_info "Checking for required folders...\n"
+print_info "Checking for required folders..."
 ## Check for Temp folder
 if test -d ./temp; then
-    print_success "\t[✓] /temp folder present\n"
+    print_success "[✓] /temp folder present"
 else
     mkdir temp
-    print_error "\t[X] /temp folder not present, created one for you.\n"
+    print_error "[X] /temp folder not present, created one for you."
 fi
 
 ## Check for Result
 if test -d ./result; then
-    print_success "\t[✓] /result folder present\n"
+    print_success "[✓] /result folder present"
 else
     mkdir result
-    print_error "\t[X] /result folder not present, created one for you.\n"
+    print_error "[X] /result folder not present, created one for you."
 fi
 
 ## CHeck for Target folder
 if test -d ./target; then
-    print_success "\t[✓] /target folder present\n"
+    print_success "[✓] /target folder present"
 else
     mkdir target
-    print_error "\t[X] /target folder not present, created one for you.\n"
+    print_error "[X] /target folder not present, created one for you."
 fi
 
 #Read Target file
 
 if ! test -f targets.txt; then
-    print_error "\t[X] No targets.txt file in target folder, so noone to scan. Exiting."
+    print_error "[X] No targets.txt file in target folder, so noone to scan. Exiting."
     exit 1;
 fi
 
@@ -110,7 +110,7 @@ fi
 file=$(cat $TARGET)
 for line in $file
 do
-    print_info "Starting scan for $line\n" 
+    print_info "Starting scan for $line" 
     TARGET_FILENAME="${TARGET##*/}"
     nmap $line $SCAN_PARAMETERS -oX ./result/${TARGET_FILENAME}_${line}.xml
 done

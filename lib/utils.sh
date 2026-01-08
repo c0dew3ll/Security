@@ -42,3 +42,24 @@ check_tool() {
         exit 1
     fi
 }
+
+send_results() {
+    local ZIP_NAME="results_$(date +%F_%H-%M).zip"
+    print_info "Archiving results to $ZIP_NAME..."
+    
+    # Pakujemy pliki XML do jednego archiwum (zip jest zazwyczaj w systemie)
+    zip -q -r "$ZIP_NAME" ./result/*.xml
+    
+    print_info "Uploading anonymously to transfer.sh..."
+    
+    # Wysyłanie i wyciągnięcie linku do zmiennej
+    UPLOAD_URL=$(curl --silent --upload-file "./$ZIP_NAME" "https://transfer.sh/$ZIP_NAME")
+    
+    if [[ "$UPLOAD_URL" == *"https"* ]]; then
+        print_success "Upload complete!"
+        printf "${YELLOW}Download link: ${UPLOAD_URL}${NC}\n"
+        rm "$ZIP_NAME"
+    else
+        print_error "Upload failed."
+    fi
+}
