@@ -26,6 +26,7 @@ A modular Bash-based network scanner designed for automated reconnaissance with 
 │   └── comms.sh       # HTTP handling and Data Exfiltration
 └── result/            # Temporary directory for XML reports
 
+```
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
