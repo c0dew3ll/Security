@@ -21,6 +21,7 @@ UPLOAD=false
 SCAN_TYPE="default"
 ENCRYPT_PASS="ChangeMe123!"
 STATIONARY_ROOM="UUID_222222222"
+PRESERVE_HISTORY=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -40,23 +41,36 @@ while [[ $# -gt 0 ]]; do
       SCAN_TYPE="$2"
       shift 2
       ;;
-    -h|--help) # Obsługa pomocy
+    -r|--room-name)
+      STATIONARY_ROOM="$2"
+      shift 2
+      ;;
+    -p|--password)
+      ENCRYPT_PASS="$2"
+      shift 2
+      ;;
+    -k|--keep-history)
+      PRESERVE_HISTORY=true
+      shift
+      ;;
+    -h|--help)
       usage
       ;;
     *)
       printf "[!] Unknown option: $1"
-      usage # Wyświetla pomoc przy błędnym argumencie
+      usage
       ;;
   esac
 done
 
 #Parse SCAN_PARAMETERS
+#TODO Zombie scan
 case "$SCAN_TYPE" in
     "default") SCAN_PARAMETERS="-sT -p1-1000" ;;
     "fast")    SCAN_PARAMETERS="-F" ;;
     "full")    SCAN_PARAMETERS="-p-" ;;
     "zombie")  SCAN_PARAMETERS="-sI ${ZOMBIE_IP} -Pn -f --data-length 32 -g 53" ;;
-    *)         SCAN_PARAMETERS="$SCAN_TYPE" ;; # Pozwala wpisać np. -sV bezpośrednio
+    *)         SCAN_PARAMETERS="$SCAN_TYPE" ;;
 esac
 
 print_info "Target: $TARGET"
@@ -121,22 +135,19 @@ done < "$TARGET"
 if [[ "$UPLOAD" == true ]]; then
     print_info "Exfiltrating data..."
     
-    # Przechwytujemy TYLKO czysty link (dzięki poprawce print_info w lib)
     RAW_LINK=$(send_results)
-    print_info "DEBUG: Przechwycony link to: --->$RAW_LINK<---" # Dodaj to tymczasowo
 
     if [[ -n "$RAW_LINK" && "$RAW_LINK" == http* ]]; then
-        # Szyfrowanie
         CIPHER_TEXT=$(encrypt_msg "$RAW_LINK" "$ENCRYPT_PASS")
         
-        # Powiadomienie
         notify_admin "$STATIONARY_ROOM" "NEW_REPORT: $CIPHER_TEXT"
-        print_success "Data sent to Hack.chat room: $STATIONARY_ROOM"
+        print_success "Data sent to ntfy.sh room: $STATIONARY_ROOM"
         
-        # Cleanup
-        rm -rf ./result/*.xml
-        rm -rf ./temp/*
-        print_info "Local traces removed."
+        if [[ "$KEEP_HISTORY" == false ]]; then
+            rm -rf ./result/*.xml
+            rm -rf ./temp/*
+            print_info "Local traces removed."
+        fi
     else
         print_error "Exfiltration failed! RAW_LINK is empty or invalid."
     fi
