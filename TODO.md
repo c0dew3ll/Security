@@ -19,3 +19,11 @@ TODO
 - Save offset to get state between run
 
 
+NEXT STEPS:
+- Upload scan results to some stealthy location (compromised host?)
+- C2 server consumes those reports, and import to db_nmap
+- C2 server exports list of targets for certain ports (even version?)
+- Other workers consume, and provide further scans
+- HTTP Servers - version enumeration? Stack enumeration? Auto wordpress detector?
+- 
+
